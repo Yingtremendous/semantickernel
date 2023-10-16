@@ -1,0 +1,6 @@
+{
+    "$schema": 1,
+    "type": "completion",
+    "description": "Get the intent of the user"
+
+}

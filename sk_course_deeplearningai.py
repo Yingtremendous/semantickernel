@@ -1,3 +1,7 @@
+"""
+Code from lesson 1-3 tested
+"""
+
 # Configure your local machine to run Semantic Kernel
 from operator import le
 
@@ -14,6 +18,7 @@ from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion, AzureCha
 # import os
 # openai.api_key = os.getenv("OPENAI_API_KEY")
 # print(openai.api_key)
+
 kernel = sk.Kernel()
 
 useAzureOpenAI = False
@@ -27,8 +32,9 @@ else:
 print("you made a kernel!")
 
 
-"""for hugging face need torch and transformers
-    """
+"""
+for hugging face need torch and transformers
+"""
 # get semantic kernel from hugging face
 # kernel.add_text_completion_service("huggingface", HuggingFaceTextCompletion("gpt2"),task="text-generation")
 # print("you made a kernel for hugging faces!")
@@ -82,11 +88,23 @@ class ExoticLanguagePlugin:
         for word in words:
             pig_latin_words.append(self.word_to_pig_latin(word))
         return " ".join(pig_latin_words)
-exotic_language_plugin = kernel.import_skill(ExoticLanguagePlugin(), skill_name="exotic_language_plugin") 
-pig_latin_function = exotic_language_plugin("pig_latin")
+async def skNativeFunction():
+    kernel = sk.Kernel()
 
-final_result = await kernel.run_async(summary_function, pig_latin_function, input_str=sk_input) 
-print(final_result)
+    useAzureOpenAI = False
+
+    if useAzureOpenAI:
+        deployment, api, endpoint = sk.azure_openai_settings_from_dot_env()
+        kernel.add_text_completion_service("azureioenai", AzureChatCompletion)
+    else:
+        api_key, org_id = sk.openai_settings_from_dot_env()
+        kernel.add_text_completion_service("openai", OpenAIChatCompletion("gpt-3.5-turbo-0301", api_key, org_id))
+    print("you made a kernel!")
+    exotic_language_plugin = kernel.import_skill(ExoticLanguagePlugin(), skill_name="exotic_language_plugin") 
+    pig_latin_function = exotic_language_plugin("pig_latin")
+
+    final_result = await kernel.run_async(summary_function, pig_latin_function, input_str=sk_input) 
+    print(final_result)
 
 
 # change text for different situation
@@ -117,24 +135,43 @@ sk_prompt = """
 
 convert the analysis provided above to the business domain of {{$domain}}
 """
-shift_domain_function = kernel.create_semantic_function(
-    prompt_template=sk_prompt,
-    description="translate the idea to another domain",
-    max_tokens=1000,
-    temperature=0.1,
-    top_p=0.5)
-my_context = kernel.create_context()
-my_context["input"] = swot_interview
-my_context["domain"] = "construction management"
+async def shiftDomainswot():
+    kernel = sk.Kernel()
 
-results = await kernel.run_async(shift_domain_function, input_context=my_context)
-print(results)
+    useAzureOpenAI = False
+
+    if useAzureOpenAI:
+        deployment, api, endpoint = sk.azure_openai_settings_from_dot_env()
+        kernel.add_text_completion_service("azureioenai", AzureChatCompletion)
+    else:
+        api_key, org_id = sk.openai_settings_from_dot_env()
+        kernel.add_text_completion_service("openai", OpenAIChatCompletion("gpt-3.5-turbo-0301", api_key, org_id))
+    shift_domain_function = kernel.create_semantic_function(
+        prompt_template=sk_prompt,
+        description="translate the idea to another domain",
+        max_tokens=1000,
+        temperature=0.1,
+        top_p=0.5)
+    my_context = kernel.create_new_context()
+    my_context["input"] = swot_interview
+    my_context["domain"] = "construction management"
+
+    """
+    # domain shift ---> text for child 
+    # add level into context
+    my_context_child['input'] = swot_interview
+    my_context_child['domain'] = "construction management"
+    my_context_child["level"] = "child"
+    results_child = await kernel.run_async(shift_domain_function, input_context=my_context)
 
 
-# domain shift ---> text for child 
-# add level into context
-my_context_child['input'] = swot_interview
-my_context_child['domain'] = "construction management"
-my_context_child["level"] = "child"
-results_child = await kernel.run_async(shift_domain_function, input_context=my_context)
+    """
+    results = await kernel.run_async(shift_domain_function, input_context=my_context)
+    print(results)
+
+
+import asyncio
+
+asyncio.run(shiftDomainswot())
+
 
